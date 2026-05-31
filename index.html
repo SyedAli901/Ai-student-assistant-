@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyAI – Smart Study Assistant (10MB Optimized)</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Montserrat:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://generativelanguage.googleapis.com;">
+
+<div id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">StudyAI</span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-btn active" data-tab="chat" onclick="switchTab('chat')">
+        <span class="nav-icon">💬</span>
+        <span>Ask Questions</span>
+      </button>
+      <button class="nav-btn" data-tab="upload" onclick="switchTab('upload')">
+        <span class="nav-icon">📤</span>
+        <span>Upload Notes</span>
+      </button>
+      <button class="nav-btn" data-tab="summary" onclick="switchTab('summary')">
+        <span class="nav-icon">📋</span>
+        <span>Summarize</span>
+      </button>
+      <button class="nav-btn" data-tab="tts" onclick="switchTab('tts')">
+        <span class="nav-icon">🔊</span>
+        <span>Listen (TTS)</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Ready</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+      <h1 class="page-title" id="pageTitle">Ask Questions</h1>
+      <div class="token-info" id="tokenInfo">AI: Multi-Provider</div>
+    </header>
+
+    <div class="error-banner" id="errorBanner" style="display:none">
+      <span id="errorMsg"></span>
+      <button onclick="closeError()">✕</button>
+    </div>
+
+    <section class="tab-panel active" id="tab-chat">
+      <div class="chat-window" id="chatWindow">
+        <div class="chat-welcome">
+          <div class="welcome-icon">🎓</div>
+          <h2>Hello, Student!</h2>
+          <p>Ask me anything about your studies..</p>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <textarea id="chatInput" placeholder="Type your question here..." rows="1"
+          onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" onclick="sendQuestion()" id="sendBtn">
+          <span>Send</span> ➤
+        </button>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-upload">
+      <div class="upload-zone" id="uploadZone"
+        ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+        <div class="upload-icon">📁</div>
+        <h3>Drop your notes here</h3>
+        <p>Supports PDF, TXT, DOC files (max 10MB)</p>
+        <input type="file" id="fileInput" accept=".pdf,.txt,.md,.doc,.docx" onchange="handleFileSelect(event)" style="display:none">
+        <button class="upload-btn" onclick="document.getElementById('fileInput').click()">Choose File</button>
+      </div>
+      <div class="uploaded-list" id="uploadedList"></div>
+    </section>
+
+    <section class="tab-panel" id="tab-summary">
+      <div class="summary-panel">
+        <div class="summary-input-area">
+          <label>Paste text or use uploaded notes:</label>
+          <textarea id="summaryInput" placeholder="Paste your notes here to summarize..." rows="8"></textarea>
+          <div class="summary-controls">
+            <select id="summaryStyle">
+              <option value="bullets">Bullet Points</option>
+              <option value="paragraph">Short Paragraph</option>
+              <option value="flashcards">Flashcard Style</option>
+            </select>
+            <button class="action-btn" onclick="summarizeText()" id="sumBtn">📋 Summarize</button>
+            <button class="action-btn secondary" onclick="useUploadedNotes()">📂 Use Uploaded Notes</button>
+          </div>
+        </div>
+        <div class="summary-output" id="summaryOutput" style="display:none">
+          <div class="output-header">
+            <h3>Summary</h3>
+            <div class="output-actions">
+              <button onclick="copySummary()">📋 Copy</button>
+              <button onclick="listenSummary()">🔊 Listen</button>
+            </div>
+          </div>
+          <div id="summaryResult"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-tts">
+      <div class="tts-panel">
+        <h2>Text-to-Speech</h2>
+        <p class="tts-desc">Type or paste any text and listen to it out loud.</p>
+        <textarea id="ttsInput" placeholder="Enter or paste text to read aloud..." rows="6"></textarea>
+        <div class="tts-settings">
+          <label>Voice: <select id="voiceSelect"></select></label>
+          <label>Speed: <input type="range" id="rateRange" min="0.5" max="2" step="0.1" value="1"><span id="rateVal">1.0x</span></label>
+          <label>Pitch: <input type="range" id="pitchRange" min="0.5" max="2" step="0.1" value="1"><span id="pitchVal">1.0</span></label>
+        </div>
+        <div class="tts-controls">
+          <button class="tts-btn play" onclick="ttsPlay()" id="ttsPlayBtn">▶ Play</button>
+          <button class="tts-btn pause" onclick="ttsPause()" id="ttsPauseBtn" disabled>⏸ Pause</button>
+          <button class="tts-btn stop" onclick="ttsStop()" id="ttsStopBtn" disabled>⏹ Stop</button>
+        </div>
+        <div class="tts-progress" id="ttsProgress" style="display:none">
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <span id="ttsStatus">Reading...</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="config.js"></script>
+<script src="db.js"></script>
+<script src="security.js"></script>
+<script src="monitor.js"></script>
+<script src="ai.js"></script>
+<script src="api.js"></script>
+<script src="app.js"></script>
+<script src="fontswitcher.js"></script>
+</body>
+</html>
